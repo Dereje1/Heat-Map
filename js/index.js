@@ -1,5 +1,5 @@
 const url = "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/global-temperature.json"
-const margin = {top: 100, right: 90, bottom: 20, left: 75}
+const margin = {top: 100, right: 90, bottom: 25, left: 75}
 let width = window.innerWidth*.85-margin.left-margin.right,
     height = window.innerHeight*.85-margin.top-margin.bottom;
 
@@ -21,14 +21,14 @@ const colorObj={
 }
 const colorKey=[2.7,3.9,5,6.1,7.2,8.3,9.4,10.5,11.6,12.7]
 
-let x = d3.scaleLinear()//x axis scale for d3 interpretation
+let x = d3.scaleLinear()//use linear for x since only year data given
     .range([0,width]);
-let y = d3.scaleLinear()//y axis scale for d3 interpretation
+let y = d3.scaleLinear()//use linear for y since only months are used
     .range([0,height]);
 
-let x2=d3.scaleTime()
+let x2=d3.scaleTime()//used for axis display only
     .rangeRound([0, width]);
-let y2=d3.scaleTime()
+let y2=d3.scaleTime()//used for axis display only
     .range([0, height])
 let xAxis = d3.axisBottom(x2)//xaxis display properties
     .ticks(10)
@@ -53,18 +53,23 @@ let chart = d3.select(".chart")//main chart definition
 
 d3.json(url,function(error,heatData){//use d3's own json capabilites to get data
   if (error) throw error;
-  //restructure data to make it easier to extract needed info
+
   const baseTemp = heatData.baseTemperature
-  let transposedHeat = heatData.monthlyVariance
+  let transposedHeat = heatData.monthlyVariance //data already coming in good format
+
+  //find minimum and maximum of data using .extent to set domain
   let xDataRange = d3.extent(transposedHeat, function(d) { return d.year})
   let yDataRange = d3.extent(transposedHeat, function(d) { return d.month})
 
+  //set plot domain
   x.domain(xDataRange)
   y.domain(yDataRange)
 
+  //set axis domain by parsing range data from above into time  format
   x2.domain(xDataRange.map((d)=>yearFormat(d)))
   y2.domain(yDataRange.map((d)=>monthFormat(d)))
-  console.log(yDataRange.map((d)=>monthFormat(d)))
+
+  //all rectangles will have same dims
   let barHeight = height/(yDataRange[1]-yDataRange[0])
   let barWidth = width/(xDataRange[1]-xDataRange[0])
 
@@ -72,6 +77,7 @@ d3.json(url,function(error,heatData){//use d3's own json capabilites to get data
   let rectGrouping = chart.selectAll("g")
       .data(transposedHeat)
       .enter().append("g")
+      //transform g by year and month
       .attr("transform", function(d, i) { return "translate(" + x(d.year) + "," + (y(d.month)-barHeight)+ ")"; });
   rectGrouping.append("rect")
       .attr("width",barWidth)
@@ -98,13 +104,14 @@ d3.json(url,function(error,heatData){//use d3's own json capabilites to get data
 
 })
 
-drawScale()
-function drawScale(){
+drawScale()//call scale drawing function independenant from data driven plot (outside json)
+function drawScale(){//draws scale, adds text and title
   let scaleColors = colorKey.map((key)=>colorObj[key]);
   scaleColors.push(colorObj["default"])
+  //attempting using diagonal of inner screen width to set font size
   let standardFontSize = Math.pow((Math.pow(width,2)+Math.pow(height,2)),0.5)*0.01
-  console.log(standardFontSize)
-  for (let i=0;i<scaleColors.length;i++){
+
+  for (let i=0;i<scaleColors.length;i++){//set color scale rectangles
       chart.append("rect")
         .attr("x",(width*1.02))
         .attr("y",((i*20)-(height*.09)))
@@ -112,9 +119,10 @@ function drawScale(){
         .attr("height",20)
         .attr("fill",scaleColors[i])
   }
-  for (let i=0;i<colorKey.length+1;i++){
+  for (let i=0;i<colorKey.length+1;i++){//set color scale text
       let txtval;
       if (i===colorKey.length){txtval=">" + colorKey[i-1]}
+      else if(i===0){txtval="<" + colorKey[i]}
       else{txtval=colorKey[i]}
       chart.append("text")
         .attr("x",(width*1.06))
@@ -124,7 +132,7 @@ function drawScale(){
         .style("fill", "white")
         .text(txtval)
   }
-chart.append("text")
+chart.append("text")//set title
   .attr("x",width*.5)
   .attr("y",-75)
   .attr("text-anchor", "middle")
@@ -135,10 +143,9 @@ chart.append("text")
   .on("click",function(){window.open(url,"_blank")})
 }
 
-function getHeatColor(temp) {
+function getHeatColor(temp) {//gets color for a given temp
   for(let i=0;i<colorKey.length;i++){
       if (temp<colorKey[i]){return colorObj[colorKey[i]]}
   }
-
   return colorObj["default"];
 }
